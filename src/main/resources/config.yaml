@@ -1,0 +1,27 @@
+datasources:
+  oracle:
+    driver: oracle.jdbc.OracleDriver
+    url: jdbc:oracle:thin:@//192.168.8.101:1521/demo
+    username: demo
+    password: demo
+  postgresql:
+    driver: org.postgresql.Driver
+    url: jdbc:postgresql://192.168.8.101:5432/demo
+    username: demo
+    password: demo
+
+datasourceCode: panwei
+
+getShardingKeysSql: |
+  select mod(asset_id, 100) as sharding_key, count(*) as count, sum(count(*)) over() as sum, row_number() over(order by count(*) desc) as rn
+  from dim.dim_asset
+  group by mod(asset_id, 100);
+
+beforeAllSql: |
+  truncate table dwd.dwd_asset;
+
+shardingSqlHook: |
+  insert into dwd.dwd_asset
+  select * 
+  from ods.ods_asset
+  where mod(asset_id, 100) = ${sharding_key};
